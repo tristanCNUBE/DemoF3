@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F3 Leasing — Expediente</title>
+<style>
+  :root {
+    --navy: #1B2A4A; --navy-dk: #121D33; --steel: #33495E;
+    --gold: #B08D57; --gold-lt: #D8C39A; --light: #F4F1EC; --cream: #FAF8F4;
+    --gray: #6B6B6B; --line: #E1DED6; --green: #3E7D4C; --amber: #B08D2B; --red: #B0463B;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Calibri, sans-serif; background: var(--cream); color: #222; }
+
+  header.top { background: var(--navy); padding: 24px 28px; }
+  header.top .eyebrow { color: var(--gold-lt); letter-spacing: 3px; font-size: 11px; text-transform: uppercase; }
+  header.top h1 { margin: 4px 0 0; font-size: 20px; font-weight: 700; color: #fff; }
+  header.top .sub { color: rgba(255,255,255,0.65); font-size: 13px; margin-top: 4px; }
+
+  main { max-width: 860px; margin: 0 auto; padding: 24px 20px 70px; }
+
+  .progress-wrap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--gray); margin-bottom: 8px; }
+  .progress-bar { height: 8px; background: var(--light); border-radius: 20px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--green) 100%); border-radius: 20px; transition: width 0.4s ease; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1; padding: 11px; border-radius: 8px; border: 1px solid var(--line); background: #fff;
+    font-size: 13.5px; font-weight: 600; color: var(--gray); cursor: pointer; text-align: center;
+  }
+  .tab-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .tab-btn .tag { display: block; font-size: 10.5px; font-weight: 400; opacity: 0.75; margin-top: 2px; }
+
+  .doc-section { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; display: none; }
+  .doc-section.active { display: block; }
+  .doc-section h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--navy);
+    border-left: 3px solid var(--gold); padding-left: 10px; margin: 0 0 14px;
+  }
+  .doc-section h2:not(:first-child) { margin-top: 22px; }
+
+  .field-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--line); align-items: baseline; }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .k { font-size: 12.5px; color: var(--gray); }
+  .field-row .v { font-size: 14px; color: #222; font-weight: 600; }
+  .field-row .v.pending { color: #C9C4B8; font-weight: 400; font-style: italic; }
+
+  table.mini { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.mini th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--gray); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  table.mini td { font-size: 13.5px; padding: 8px; border-bottom: 1px solid var(--line); }
+  table.mini td.pending { color: #C9C4B8; font-style: italic; }
+
+  .doc-pill-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .doc-pill { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; color: #fff; }
+  .pill-done { background: var(--green); }
+  .pill-pending { background: #EDEBE6; color: var(--gray); }
+
+  .empty-state { text-align: center; color: var(--gray); padding: 60px 20px; font-size: 14px; }
+  .folio-picker { margin-bottom: 16px; }
+  .folio-picker select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); font-size: 14px; background: #fff; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="eyebrow">F3 Leasing</div>
+  <h1>Expediente de solicitud</h1>
+  <div class="sub" id="folioSub">Cargando…</div>
+</header>
+<main>
+  <div class="folio-picker" id="folioPicker" style="display:none;">
+    <select id="folioSelect" onchange="onFolioChange()"></select>
+  </div>
+  <div id="content"><div class="empty-state">Cargando…</div></div>
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://bfyrxykuaqxvbqtjojoe.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmeXJ4eWt1YXF4dmJxdGpvam9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODEyNTYsImV4cCI6MjA5NDM1NzI1Nn0.-qF-Cqzj2nvlkaKDzDlGQcmj2L-OGbcrsCDNAlP_sxI';
+
+  const params = new URLSearchParams(window.location.search);
+  let folioActual = params.get('folio');
+
+  let DATA = { cotizaciones: [], solicitudes: [], documentos: [], accionistas: [], referencias: [] };
+  let tabActivo = 0;
+
+  function v(val, fallback) {
+    return (val === null || val === undefined || val === '') ? `<span class="v pending">${fallback || 'Pendiente de captura'}</span>` : `<span class="v">${escapeHtml(String(val))}</span>`;
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function row(label, val, fallback) {
+    return `<div class="field-row"><div class="k">${label}</div><div>${v(val, fallback)}</div></div>`;
+  }
+
+  async function cargar() {
+    const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+    const [cotRes, solRes, docRes, accRes, refRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/f3_cotizaciones?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_solicitudes?select=*&order=created_at.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_documentos?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_accionistas?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_referencias_comerciales?select=*`, { headers }),
+    ]);
+    DATA.cotizaciones = await cotRes.json();
+    DATA.solicitudes = await solRes.json();
+    DATA.documentos = await docRes.json();
+    DATA.accionistas = await accRes.json();
+    DATA.referencias = await refRes.json();
+
+    const folios = [...new Set(DATA.solicitudes.map(s => s.cotizacion_folio).filter(Boolean))];
+
+    if (folios.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="empty-state">Aún no hay solicitudes con folio de cotización.</div>';
+      document.getElementById('folioSub').textContent = 'Sin datos';
+      return;
+    }
+
+    if (!folioActual || !folios.includes(folioActual)) folioActual = folios[0];
+
+    if (folios.length > 1) {
+      const picker = document.getElementById('folioPicker');
+      const select = document.getElementById('folioSelect');
+      select.innerHTML = folios.map(f => `<option value="${f}" ${f === folioActual ? 'selected' : ''}>${f}</option>`).join('');
+      picker.style.display = 'block';
+    }
+
+    render();
+  }
+
+  function onFolioChange() {
+    folioActual = document.getElementById('folioSelect').value;
+    tabActivo = 0;
+    render();
+  }
+
+  function render() {
+    const cot = DATA.cotizaciones.find(c => c.folio === folioActual);
+    const personas = DATA.solicitudes.filter(s => s.cotizacion_folio === folioActual);
+
+    document.getElementById('folioSub').textContent = cot
+      ? `${cot.folio} · ${cot.vehiculo} · ${cot.plazo_meses ? cot.plazo_meses + ' meses' : ''}`
+      : folioActual;
+
+    if (personas.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="empty-state">No hay personas registradas para este folio todavía.</div>';
+      return;
+    }
+
+    const tabsHtml = personas.map((p, i) => `
+      <div class="tab-btn ${i === tabActivo ? 'active' : ''}" onclick="cambiarTab(${i})">
+        ${p.rol || 'Sin rol'}
+        <span class="tag">${escapeHtml(p.nombre_razon_social || p.telefono)}</span>
+      </div>
+    `).join('');
+
+    const seccionesHtml = personas.map((p, i) => seccionPersona(p, i)).join('');
+
+    // Progreso global: promedio de checklist entre todas las personas del folio
+    let totalItems = 0, doneItems = 0;
+    personas.forEach(p => {
+      const chk = checklistDe(p);
+      totalItems += chk.length;
+      doneItems += chk.filter(c => c.done).length;
+    });
+    const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+
+    document.getElementById('content').innerHTML = `
+      <div class="progress-wrap">
+        <div class="progress-label"><span>Avance del expediente</span><span>${pct}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="tabs">${tabsHtml}</div>
+      ${seccionesHtml}
+    `;
+  }
+
+  function checklistDe(p) {
+    const docs = DATA.documentos.filter(d => d.solicitud_id === p.id);
+    const misAccionistas = DATA.accionistas.filter(a => a.solicitud_id === p.id);
+    const misReferencias = DATA.referencias.filter(r => r.solicitud_id === p.id);
+    const items = [
+      { done: docs.some(d => d.tipo_documento === 'identificacion') },
+      { done: docs.some(d => d.tipo_documento === 'csf') },
+      { done: misReferencias.length > 0 },
+    ];
+    if (p.tipo_persona === 'PM') {
+      items.push(
+        { done: misAccionistas.length > 0 },
+        { done: !!p.representante_legal },
+        { done: !!p.acta_constitutiva },
+      );
+    }
+    return items;
+  }
+
+  function seccionPersona(p, i) {
+    const docs = DATA.documentos.filter(d => d.solicitud_id === p.id);
+    const misAccionistas = DATA.accionistas.filter(a => a.solicitud_id === p.id);
+    const misReferencias = DATA.referencias.filter(r => r.solicitud_id === p.id);
+    const repLegal = p.representante_legal || {};
+    let acta = {};
+    try { acta = p.acta_constitutiva ? JSON.parse(p.acta_constitutiva) : {}; } catch (e) {}
+
+    const idDoc = docs.find(d => d.tipo_documento === 'identificacion');
+    const csfDoc = docs.find(d => d.tipo_documento === 'csf');
+
+    let html = `<div class="doc-section ${i === tabActivo ? 'active' : ''}" id="seccion-${i}">`;
+
+    html += `<h2>Datos generales</h2>`;
+    html += row('Tipo de persona', p.tipo_persona === 'PM' ? 'Persona Moral' : (p.tipo_persona === 'PFAE' ? 'Persona Física (PFAE)' : null));
+    html += row('Rol', p.rol);
+    html += row('Nombre / Razón social', p.nombre_razon_social);
+    html += row('Teléfono', p.telefono);
+    html += row('Régimen solicitado', p.regimen_solicitado);
+
+    html += `<h2>Datos fiscales</h2>`;
+    html += row('RFC', p.rfc);
+    html += row('CURP', p.curp);
+    html += row('Régimen fiscal', p.regimen_fiscal);
+    html += row('Domicilio fiscal', p.domicilio_fiscal);
+
+    if (p.tipo_persona === 'PM') {
+      html += `<h2>Cuadro accionario</h2>`;
+      if (misAccionistas.length === 0) {
+        html += `<div class="field-row"><div class="k">Accionistas</div><div><span class="v pending">Pendiente de captura</span></div></div>`;
+      } else {
+        html += `<table class="mini"><tr><th>Nombre</th><th>Monto</th><th>% Participación</th></tr>` +
+          misAccionistas.map(a => `<tr><td>${escapeHtml(a.nombre || '—')}</td><td>${a.monto ?? '—'}</td><td>${a.porcentaje ?? '—'}%</td></tr>`).join('') +
+          `</table>`;
+      }
+
+      html += `<h2>Representante legal</h2>`;
+      html += row('Nombre', repLegal.nombre);
+      html += row('RFC', repLegal.rfc);
+      html += row('CURP', repLegal.curp);
+      html += row('Estado civil', repLegal.estado_civil);
+      html += row('Domicilio', repLegal.domicilio);
+
+      html += `<h2>Acta constitutiva</h2>`;
+      html += row('Escritura', acta.escritura);
+      html += row('Estado de registro', acta.estado_registro);
+      html += row('Folio mercantil', acta.folio_mercantil);
+    }
+
+    html += `<h2>Referencias comerciales</h2>`;
+    if (misReferencias.length === 0) {
+      html += `<div class="field-row"><div class="k">Referencias</div><div><span class="v pending">Pendiente de captura</span></div></div>`;
+    } else {
+      html += `<table class="mini"><tr><th>Contacto</th><th>Empresa</th><th>Teléfono</th></tr>` +
+        misReferencias.map(r => `<tr><td>${escapeHtml(r.nombre_contacto || '—')}</td><td>${escapeHtml(r.empresa || '—')}</td><td>${escapeHtml(r.telefono || '—')}</td></tr>`).join('') +
+        `</table>`;
+    }
+
+    html += `<h2>Documentos</h2>`;
+    html += `<div class="doc-pill-row"><span>Identificación oficial</span><span class="doc-pill ${idDoc ? 'pill-done' : 'pill-pending'}">${idDoc ? Math.round((idDoc.confianza || 0) * 100) + '% confianza' : 'Pendiente'}</span></div>`;
+    html += `<div class="doc-pill-row"><span>Constancia de Situación Fiscal</span><span class="doc-pill ${csfDoc ? 'pill-done' : 'pill-pending'}">${csfDoc ? Math.round((csfDoc.confianza || 0) * 100) + '% confianza' : 'Pendiente'}</span></div>`;
+
+    html += `</div>`;
+    return html;
+  }
+
+  function cambiarTab(i) {
+    tabActivo = i;
+    render();
+  }
+
+  cargar();
+</script>
+</body>
+</html>
