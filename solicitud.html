@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F3 Leasing — Solicitud</title>
+<style>
+  :root {
+    --f3blue: #C9DEF2; --f3blue-line: #A9C7E8; --f3ink: #1D2B3A; --gray: #6B6B6B; --line: #D8DCE1; --green: #3E7D4C;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, "Segoe UI", Calibri, sans-serif; background: #EDF0F3; color: var(--f3ink); }
+
+  .toolbar { background: #fff; border-bottom: 1px solid var(--line); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .toolbar select { padding: 7px 10px; border-radius: 4px; border: 1px solid var(--line); font-size: 13px; }
+  .toolbar .tabs-mini { display: flex; gap: 6px; }
+  .toolbar .tab-mini { padding: 7px 14px; border: 1px solid var(--line); border-radius: 20px; font-size: 12.5px; font-weight: 600; color: var(--gray); cursor: pointer; background: #fff; }
+  .toolbar .tab-mini.active { background: var(--f3ink); border-color: var(--f3ink); color: #fff; }
+  .toolbar button.print { background: var(--f3ink); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; font-size: 12.5px; cursor: pointer; }
+
+  .sheet { max-width: 780px; margin: 24px auto 70px; background: #fff; border: 1px solid var(--line); padding: 28px 32px; }
+
+  .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--f3ink); padding-bottom: 12px; margin-bottom: 4px; }
+  .doc-header .brandmark { font-size: 24px; font-weight: 800; }
+  .doc-header .brandmark .thin { font-weight: 300; }
+  .doc-header .fecha { text-align: right; font-size: 11.5px; }
+  .doc-header .fecha .k { color: var(--gray); text-transform: uppercase; letter-spacing: 0.4px; }
+  .doc-header .fecha .v { font-weight: 700; }
+
+  .doc-title { text-align: center; font-size: 14px; font-weight: 800; letter-spacing: 0.3px; margin: 14px 0 20px; text-transform: uppercase; }
+  .doc-title .sub { display: block; font-size: 12px; font-weight: 400; color: var(--gray); margin-top: 2px; text-transform: none; }
+
+  h2.sect { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; text-align: center; border-bottom: 1.5px solid var(--f3ink); padding-bottom: 6px; margin: 20px 0 12px; font-weight: 800; }
+
+  .fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 4px; }
+  .fbox .k { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--gray); margin-bottom: 3px; }
+  .fbox .box { background: var(--f3blue); border: 1px solid var(--f3blue-line); border-radius: 2px; padding: 6px 9px; font-size: 12.5px; font-weight: 700; color: var(--f3ink); min-height: 15px; }
+  .fbox .box.pending { color: #9AA7B4; font-weight: 400; font-style: italic; background: #F3F5F7; border-color: var(--line); }
+
+  table.mini { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.mini th { text-align: left; font-size: 10px; text-transform: uppercase; color: var(--gray); padding: 5px 7px; border-bottom: 2px solid var(--f3ink); }
+  table.mini td { font-size: 12px; padding: 7px; border-bottom: 1px solid var(--line); background: var(--f3blue); }
+  table.mini tr:nth-child(even) td { background: #DCE9F6; }
+  table.mini td.pending { color: #9AA7B4; font-style: italic; background: #F3F5F7; }
+
+  .credito-box { border: 1.5px solid var(--f3ink); padding: 14px 16px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .credito-box .k { font-size: 9.5px; text-transform: uppercase; color: var(--gray); letter-spacing: 0.3px; margin-bottom: 4px; }
+  .credito-box .v { font-size: 12.5px; font-weight: 700; }
+  .resp-options { display: flex; gap: 16px; align-items: center; }
+  .resp-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .resp-chip .box20 { width: 15px; height: 15px; border: 1.5px solid var(--f3ink); display: inline-block; text-align: center; line-height: 14px; font-size: 11px; font-weight: 800; }
+  .resp-chip .box20.on { background: var(--f3ink); color: #fff; }
+
+  .legal { font-size: 10px; line-height: 1.55; color: #3B4652; margin-top: 22px; }
+  .legal h3 { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; margin: 16px 0 6px; }
+  .legal p { margin: 0 0 10px; text-align: justify; }
+
+  .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+  .firma-box { text-align: center; }
+  .firma-box .rect { border: 1px solid var(--line); background: #FAFBFC; height: 70px; margin-bottom: 6px; }
+  .firma-box .label { font-size: 9.5px; color: var(--gray); }
+
+  .empty-state { text-align: center; color: var(--gray); padding: 60px 20px; font-size: 14px; }
+
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; }
+    .sheet { border: none; margin: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <select id="folioSelect" onchange="onFolioChange()"></select>
+  <div class="tabs-mini" id="tabsMini"></div>
+  <button class="print" onclick="window.print()">Imprimir / PDF</button>
+</div>
+<div id="content"><div class="empty-state">Cargando…</div></div>
+
+<script>
+  const SUPABASE_URL = 'https://bfyrxykuaqxvbqtjojoe.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmeXJ4eWt1YXF4dmJxdGpvam9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODEyNTYsImV4cCI6MjA5NDM1NzI1Nn0.-qF-Cqzj2nvlkaKDzDlGQcmj2L-OGbcrsCDNAlP_sxI';
+
+  const params = new URLSearchParams(window.location.search);
+  let folioActual = params.get('folio');
+  let personaActual = params.get('solicitud_id');
+
+  let DATA = { cotizaciones: [], solicitudes: [], accionistas: [], referencias: [] };
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function v(val, fallback) {
+    return (val === null || val === undefined || val === '') ? `<div class="box pending">${fallback || 'Pendiente'}</div>` : `<div class="box">${escapeHtml(String(val))}</div>`;
+  }
+  function row(label, val, fallback) {
+    return `<div class="fbox"><div class="k">${label}</div>${v(val, fallback)}</div>`;
+  }
+  function fgrid(rowsHtml) { return `<div class="fgrid">${rowsHtml}</div>`; }
+
+  async function cargar() {
+    const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+    const [cotRes, solRes, accRes, refRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/f3_cotizaciones?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_solicitudes?select=*&order=created_at.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_accionistas?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/f3_referencias_comerciales?select=*`, { headers }),
+    ]);
+    DATA.cotizaciones = await cotRes.json();
+    DATA.solicitudes = await solRes.json();
+    DATA.accionistas = await accRes.json();
+    DATA.referencias = await refRes.json();
+
+    if (personaActual) {
+      const p = DATA.solicitudes.find(s => s.id === personaActual);
+      if (p) folioActual = p.cotizacion_folio;
+    }
+
+    const folios = [...new Set(DATA.solicitudes.map(s => s.cotizacion_folio).filter(Boolean))];
+    if (folios.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="empty-state">Aún no hay solicitudes con folio de cotización.</div>';
+      return;
+    }
+    if (!folioActual || !folios.includes(folioActual)) folioActual = folios[0];
+
+    const select = document.getElementById('folioSelect');
+    select.innerHTML = folios.map(f => `<option value="${f}" ${f === folioActual ? 'selected' : ''}>${f}</option>`).join('');
+
+    const personas = DATA.solicitudes.filter(s => s.cotizacion_folio === folioActual);
+    if (!personaActual || !personas.some(p => p.id === personaActual)) {
+      personaActual = personas[0]?.id;
+    }
+
+    render();
+  }
+
+  function onFolioChange() {
+    folioActual = document.getElementById('folioSelect').value;
+    const personas = DATA.solicitudes.filter(s => s.cotizacion_folio === folioActual);
+    personaActual = personas[0]?.id;
+    render();
+  }
+
+  function cambiarPersona(id) {
+    personaActual = id;
+    render();
+  }
+
+  function render() {
+    const cot = DATA.cotizaciones.find(c => c.folio === folioActual);
+    const personas = DATA.solicitudes.filter(s => s.cotizacion_folio === folioActual);
+    const p = personas.find(x => x.id === personaActual) || personas[0];
+
+    document.getElementById('tabsMini').innerHTML = personas.map(per => `
+      <div class="tab-mini ${per.id === p?.id ? 'active' : ''}" onclick="cambiarPersona('${per.id}')">${per.rol || 'Sin rol'}</div>
+    `).join('');
+
+    if (!p) {
+      document.getElementById('content').innerHTML = '<div class="empty-state">No hay personas registradas para este folio todavía.</div>';
+      return;
+    }
+
+    const misAccionistas = DATA.accionistas.filter(a => a.solicitud_id === p.id);
+    const misReferencias = DATA.referencias.filter(r => r.solicitud_id === p.id);
+    const repLegal = p.representante_legal || {};
+    let acta = {};
+    try { acta = p.acta_constitutiva ? JSON.parse(p.acta_constitutiva) : {}; } catch (e) {}
+
+    const esPM = p.tipo_persona === 'PM';
+    const tipoLabel = esPM ? 'Persona Moral' : 'Persona Física';
+    const rolLabel = (p.rol || 'TITULAR').toUpperCase();
+    const hoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+    let html = `<div class="sheet">`;
+    html += `<div class="doc-header">
+      <div class="brandmark">F3<span class="thin">LEASING</span></div>
+      <div class="fecha"><div class="k">Fecha de Autorización</div><div class="v">${hoy}</div></div>
+    </div>`;
+    html += `<div class="doc-title">Información ${rolLabel}<span class="sub">${tipoLabel}</span></div>`;
+
+    html += `<h2 class="sect">Datos personales ${esPM ? 'de la empresa' : 'del cliente'}</h2>`;
+    html += fgrid(
+      row(esPM ? 'Razón Social' : 'Nombre(s) del cliente', p.nombre_razon_social) +
+      row(esPM ? 'Régimen Capital' : 'Apellidos', null) +
+      row('RFC', p.rfc)
+    );
+    html += fgrid(
+      row(esPM ? 'Fecha de Constitución' : 'Fecha de Nacimiento', esPM ? acta.fecha_documento_legal : null) +
+      row('Fecha de Inicio de Operaciones', null) +
+      row('Nacionalidad', esPM ? repLegal.nacionalidad : null) +
+      row('Régimen Fiscal', p.regimen_fiscal)
+    );
+    html += fgrid(
+      row('Domicilio Fiscal - Calle', p.domicilio_fiscal) +
+      row('Núm Exterior', null) +
+      row('Núm Interior', null)
+    );
+    html += fgrid(
+      row('Colonia', null) + row('Municipio / Alcaldía', null) + row('Ciudad', null) + row('Estado', esPM ? acta.estado_registro : null) + row('CP', null)
+    );
+    html += fgrid(
+      row('Giro Mercantil / Ocupación', null) + row('Descripción de la actividad', null)
+    );
+    html += fgrid(row('Uso de CFDI', null));
+    html += fgrid(
+      row('Teléfono Principal', null) + row('Teléfono Celular', p.telefono) + row('Correo electrónico', null)
+    );
+    html += fgrid(
+      row('País de Nacimiento', null) +
+      row('Estado Civil', esPM ? repLegal.estado_civil : null) +
+      row('Régimen Conyugal', esPM ? repLegal.regimen_conyugal : null)
+    );
+    html += fgrid(row('CURP', p.curp));
+
+    if (esPM) {
+      html += `<h2 class="sect">Cuadro accionario</h2>`;
+      if (misAccionistas.length === 0) {
+        html += fgrid(row('Accionistas', null, 'Pendiente de captura'));
+      } else {
+        html += `<table class="mini"><tr><th>Nombre</th><th>Monto</th><th>% Participación</th></tr>` +
+          misAccionistas.map(a => `<tr><td>${escapeHtml(a.nombre || '—')}</td><td>${a.monto ?? '—'}</td><td>${a.porcentaje ?? '—'}%</td></tr>`).join('') +
+          `</table>`;
+      }
+      html += `<h2 class="sect">Representante legal</h2>`;
+      html += fgrid(row('Nombre', repLegal.nombre) + row('RFC', repLegal.rfc) + row('CURP', repLegal.curp) + row('Domicilio', repLegal.domicilio));
+    }
+
+    html += `<h2 class="sect">Referencias comerciales (proveedores)</h2>`;
+    if (misReferencias.length === 0) {
+      html += fgrid(row('Referencias', null, 'Pendiente de captura'));
+    } else {
+      html += `<table class="mini"><tr><th>Contacto</th><th>Empresa</th><th>Teléfono</th></tr>` +
+        misReferencias.map(r => `<tr><td>${escapeHtml(r.nombre_contacto || '—')}</td><td>${escapeHtml(r.empresa || '—')}</td><td>${escapeHtml(r.telefono || '—')}</td></tr>`).join('') +
+        `</table>`;
+    }
+
+    const esOS = (p.rol || '').toLowerCase().includes('solidario') || (p.rol || '').toLowerCase().includes('aval');
+    html += `<div class="credito-box">
+      <div>
+        <div class="k">Para llenar por el área de crédito — Tipo de Responsabilidad</div>
+        <div class="resp-options">
+          <span class="resp-chip"><span class="box20 ${esOS ? '' : ''}"></span> Aval</span>
+          <span class="resp-chip"><span class="box20 ${esOS ? 'on' : ''}">${esOS ? '✓' : ''}</span> Obligado Solidario</span>
+        </div>
+      </div>
+      <div>
+        <div class="k">Unidad</div>
+        <div class="v">${cot ? escapeHtml(cot.vehiculo) : 'Pendiente'}</div>
+      </div>
+    </div>`;
+
+    html += `<div class="legal">
+      <h3>Aviso de Privacidad</h3>
+      <p>La información declarada es real y corresponde a la información del cliente, además estoy informado que en cumplimiento de la Ley Federal de Protección de Datos Personales en Posesión de Particulares, la información que se adjunta es tratada de forma confidencial conforme a los términos establecidos en el Aviso de Privacidad de F3 Intermediarios SAPI de CV, mismo que declaro conocer y aceptar en todos y cada uno de sus términos. Asimismo, manifiesto que el(los) producto(s) o servicio(s) que adquiero(n) serán para beneficio de la empresa que represento y no propio en el caso de ser una Persona Física. Asimismo hago constar que la documentación que se anexa es copia fiel de su original y fue cotejada por personal de F3 Intermediarios SAPI de CV.</p>
+      <h3>Autorización de Consulta de Buró de Crédito — ${rolLabel}</h3>
+      <p>Por este conducto autorizo expresamente a F3 Intermediarios SAPI de CV, para que por conducto de sus funcionarios facultados lleve a cabo Investigaciones, sobre mi comportamiento crediticio en Trans Union de México, S. A. SIC. Así mismo, declaro que conozco la naturaleza y alcance de la información que se solicitará, del uso que F3 Intermediarios SAPI de CV, hará de tal información y de que ésta podrá realizar consultas periódicas sobre mi historial, considerando que esta autorización se encuentre vigente por un periodo de 3 años contados a partir de su expedición y en todo caso durante el tiempo que se mantenga la relación jurídica. Estoy de acuerdo y acepto que este documento quede bajo propiedad de F3 Intermediarios SAPI de CV y/o Sociedad de Información Crediticia consultada para efectos de control y cumplimiento del artículo 28 de la Ley para Regular a las Sociedades de Información Crediticia; mismo que señala que las Sociedades sólo podrán proporcionar información a un Usuario, cuando éste cuente con la autorización expresa del Cliente mediante su firma autógrafa.</p>
+    </div>`;
+
+    html += `<div class="firmas">
+      <div class="firma-box"><div class="rect"></div><div class="label">Firma autógrafa con tinta azul</div></div>
+      <div class="firma-box"><div class="rect"></div><div class="label">Firma autógrafa con tinta azul</div></div>
+    </div>`;
+
+    html += `</div>`;
+    document.getElementById('content').innerHTML = html;
+  }
+
+  cargar();
+</script>
+</body>
+</html>
